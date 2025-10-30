@@ -51,11 +51,19 @@ python main.py
 
 La API estará disponible en: `http://localhost:8000`
 
+## 🔧 Variables de Entorno
+
+- `ANTHROPIC_API_KEY` (obligatoria): clave de Anthropic.
+- `API_TOKEN` (obligatoria): token Bearer para proteger endpoints.
+- `RATE_LIMIT` (opcional, por defecto `30`): nº de peticiones por minuto por IP.
+- `PORT` (opcional, por defecto `8000`): puerto de escucha cuando uses contenedor.
+
 # 🔐 Autenticación por token
 
 Los endpoints protegidos requieren Bearer Token. En Swagger (`/docs`) puedes usar el botón "Authorize".
 
 - Define tu token en `.env`:
+
 ```env
 API_TOKEN=tu_token_superseguro
 ```
@@ -63,6 +71,7 @@ API_TOKEN=tu_token_superseguro
 - Envía el header `Authorization: Bearer <token>`:
 
 ### Ejemplo cURL
+
 ```bash
 curl -X POST "http://localhost:8000/chat/simple" \
   -H "Authorization: Bearer tu_token_superseguro" \
@@ -74,6 +83,7 @@ curl -X POST "http://localhost:8000/chat/simple" \
 ```
 
 ### Ejemplo Python (requests)
+
 ```python
 import requests
 
@@ -124,13 +134,63 @@ print(response.json()["response"])
 ## 🎯 Endpoints
 
 ### Públicos
+
 - `GET /` – Estado básico y metadatos del servicio
 - `GET /health` – Health check
 - `GET /clients` – Lista de clientes configurados
 
 ### Protegidos (requieren Bearer Token)
+
 - `POST /chat` – Conversación con contexto, configurable por cliente
 - `POST /chat/simple` – Mensaje único para pruebas rápidas
+
+## 🐳 Deploy con Docker
+
+### Opción A: Docker CLI
+
+```bash
+# Construir imagen
+docker build -t chatbot-api:latest .
+
+# Ejecutar contenedor (puerto 8000 por defecto)
+docker run --rm -p 8000:8000 \
+  -e ANTHROPIC_API_KEY=tu_api_key_aqui \
+  -e API_TOKEN=tu_token_superseguro \
+  -e RATE_LIMIT=30 \
+  --name chatbot-api chatbot-api:latest
+```
+
+### Opción B: docker-compose
+
+Crea un archivo `docker-compose.yml`:
+
+```yaml
+services:
+  api:
+    build: .
+    image: chatbot-api:latest
+    container_name: chatbot-api
+    ports:
+      - "8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      API_TOKEN: ${API_TOKEN}
+      RATE_LIMIT: ${RATE_LIMIT:-30}
+    restart: unless-stopped
+```
+
+Luego:
+
+```bash
+docker compose up -d --build
+```
+
+### Consejos de producción
+
+- Restringe CORS a tus dominios: `allow_origins=["https://tu-dominio.com"]`.
+- Mantén el `API_TOKEN` en un secreto seguro (no lo subas al repo).
+- Usa logging centralizado y métricas (Prometheus, ELK, etc.).
+- Añade un proxy inverso (Nginx) si necesitas TLS/HTTP2/compresión.
 
 ## ⚙️ Dependencias principales
 
@@ -146,6 +206,7 @@ Asegúrate que tu `requirements.txt` refleja estas versiones.
 ## 🚦 Rate Limiting
 
 El sistema de anti-abuso limita peticiones por IP.
+
 - Variable `.env`: `RATE_LIMIT` (por defecto `30`) – número de peticiones permitidas por minuto
 - Respuesta en caso de exceso: `429 Demasiadas peticiones`
 
@@ -154,6 +215,7 @@ El sistema de anti-abuso limita peticiones por IP.
 ### Añadir clientes
 
 Edita el diccionario `CLIENT_CONFIGS` en `main.py`:
+
 ```python
 CLIENT_CONFIGS["nuevo"] = {
     "name": "Tu Negocio",
@@ -165,6 +227,17 @@ CLIENT_CONFIGS["nuevo"] = {
 ### Cambiar modelo de IA
 
 Modifica la key `"model"` en la llamada a `client.messages.create` (por ejemplo `"claude-sonnet-4-5-20250929"`).
+
+## 🗺️ Roadmap
+
+- [ ] Autenticación JWT con roles/claims
+- [ ] Persistencia de historial en BD (SQL/NoSQL)
+- [ ] Configuración de clientes en BD con panel admin
+- [ ] Métricas y trazas (OpenTelemetry)
+- [ ] Cache de respuestas/embeddings
+- [ ] Streaming de respuestas (Server-Sent Events/WebSocket)
+- [ ] Webhooks y colas para tareas asíncronas
+- [ ] CI/CD con tests y quality gates
 
 ## 🤝 Contribuye
 
