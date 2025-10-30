@@ -1,6 +1,6 @@
 # 🤖 AI Chatbot API
 
-API profesional de chatbot con Inteligencia Artificial usando Claude (Anthropic), lista para integrar en cualquier aplicación web o móvil. Incluye logging para fácil depuración y validación robusta de API key.
+API profesional de chatbot con Inteligencia Artificial usando Claude (Anthropic), lista para integrar en cualquier aplicación web o móvil. Incluye logging para fácil depuración, autenticación por Bearer Token y limitación de peticiones para proteger tus créditos.
 
 **Desarrollado por Jorge Lago Campos** | [LinkedIn](https://www.linkedin.com/in/jorge-lago-campos/) | [GitHub](https://github.com/Leikymain)
 
@@ -10,7 +10,8 @@ API profesional de chatbot con Inteligencia Artificial usando Claude (Anthropic)
 - ✅ **Context-aware**: Mantiene el contexto de la conversación por sesión/cliente
 - ✅ **Personalizable**: Prompts de sistema únicos por cliente y configurables vía API
 - ✅ **Endpoints claros**: `/chat`, `/chat/simple`, `/clients`, `/health`
-- ✅ **Logs automáticos**: Mensajes debug para puntos de fallo en producción
+- ✅ **Autenticación Bearer Token**: Protección simple + soporte de "Authorize" en Swagger
+- ✅ **Rate limiting**: Límite de peticiones configurable por IP para evitar abuso
 - ✅ **Swagger UI**: Documentación automática en `/docs`
 - ✅ **Productivo**: Código listo para escalar e integrar
 
@@ -39,9 +40,10 @@ source venv/bin/activate
 # Instala dependencias exactas
 pip install -r requirements.txt
 
-# Configura tu API key y el API_TOKEN
-echo "ANTHROPIC_API_KEY=tu_api_key_aqui" > .env
-echo "API_TOKEN=tu_token_superseguro" >> .env
+# Configura variables en .env
+# Clave de Anthropic y token de acceso para la API
+# RATE_LIMIT es opcional (peticiones por minuto, por IP). Default: 30
+(echo ANTHROPIC_API_KEY=tu_api_key_aqui & echo API_TOKEN=tu_token_superseguro & echo RATE_LIMIT=30) > .env
 
 # Ejecuta la API
 python main.py
@@ -51,15 +53,14 @@ La API estará disponible en: `http://localhost:8000`
 
 # 🔐 Autenticación por token
 
-Todos los endpoints requieren un token de autenticación, excepto `/`, `/docs`, `/redoc` y `/openapi.json`.
+Los endpoints protegidos requieren Bearer Token. En Swagger (`/docs`) puedes usar el botón "Authorize".
 
-- Define tu token personalizado en el archivo `.env`:
-
+- Define tu token en `.env`:
 ```env
 API_TOKEN=tu_token_superseguro
 ```
 
-- Debes enviar el token en las peticiones usando el header `Authorization`:
+- Envía el header `Authorization: Bearer <token>`:
 
 ### Ejemplo cURL
 ```bash
@@ -96,26 +97,18 @@ print(response.json())
 
 ### Swagger interactivo
 
-Abre `http://localhost:8000/docs` para probar la API.
-
-### Ejemplo básico
-
-```bash
-curl -X POST "http://localhost:8000/chat/simple" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Hola, ¿en qué me puedes ayudar?",
-    "client_id": "demo"
-  }'
-```
+Abre `http://localhost:8000/docs` para probar la API. Pulsa **Authorize** e introduce `Bearer tu_token_superseguro` para habilitar llamadas desde la UI.
 
 ### Ejemplo avanzado con contexto
 
 ```python
 import requests
 
+headers = {"Authorization": "Bearer tu_token_superseguro"}
+
 response = requests.post(
     "http://localhost:8000/chat",
+    headers=headers,
     json={
         "client_id": "ecommerce",
         "messages": [
@@ -130,14 +123,14 @@ print(response.json()["response"])
 
 ## 🎯 Endpoints
 
-- `POST /chat`  
-  Conversa manteniendo historial/contexto.
-- `POST /chat/simple`  
-  Envío ultra-sencillo, un mensaje, respuesta directa.
-- `GET /clients`  
-  Lista los clientes configurados.
-- `GET /health`  
-  Prueba de salud del servicio.
+### Públicos
+- `GET /` – Estado básico y metadatos del servicio
+- `GET /health` – Health check
+- `GET /clients` – Lista de clientes configurados
+
+### Protegidos (requieren Bearer Token)
+- `POST /chat` – Conversación con contexto, configurable por cliente
+- `POST /chat/simple` – Mensaje único para pruebas rápidas
 
 ## ⚙️ Dependencias principales
 
@@ -150,16 +143,17 @@ print(response.json()["response"])
 
 Asegúrate que tu `requirements.txt` refleja estas versiones.
 
+## 🚦 Rate Limiting
+
+El sistema de anti-abuso limita peticiones por IP.
+- Variable `.env`: `RATE_LIMIT` (por defecto `30`) – número de peticiones permitidas por minuto
+- Respuesta en caso de exceso: `429 Demasiadas peticiones`
+
 ## 💡 Personalización
-
-### Añadir log/depuración
-
-Ya está incluido `logging`, ajusta nivel desde el propio código si necesitas más detalle.
 
 ### Añadir clientes
 
 Edita el diccionario `CLIENT_CONFIGS` en `main.py`:
-
 ```python
 CLIENT_CONFIGS["nuevo"] = {
     "name": "Tu Negocio",
@@ -168,10 +162,9 @@ CLIENT_CONFIGS["nuevo"] = {
 }
 ```
 
-### Cambiar modelo
+### Cambiar modelo de IA
 
 Modifica la key `"model"` en la llamada a `client.messages.create` (por ejemplo `"claude-sonnet-4-5-20250929"`).
-
 
 ## 🤝 Contribuye
 
