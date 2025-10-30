@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -59,6 +59,29 @@ CLIENT_CONFIGS = {
         "max_tokens": 1500
     }
 }
+
+API_TOKEN = os.getenv("API_TOKEN", None)
+
+@app.middleware("http")
+async def verify_token(request: Request, call_next):
+    """
+    Middleware que protege todos los endpoints excepto la documentación y la raíz.
+    """
+    if request.url.path in ["/", "/docs", "/redoc", "/openapi.json"]:
+        return await call_next(request)
+    token = request.headers.get("Authorization")
+    if not token or not token.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Falta el header Authorization: Bearer <token>"
+        )
+    provided_token = token.split("Bearer ")[1]
+    if API_TOKEN is None or provided_token != API_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o no autorizado"
+        )
+    return await call_next(request)
 
 @app.get("/")
 def root():

@@ -39,14 +39,58 @@ source venv/bin/activate
 # Instala dependencias exactas
 pip install -r requirements.txt
 
-# Configura tu API key
+# Configura tu API key y el API_TOKEN
 echo "ANTHROPIC_API_KEY=tu_api_key_aqui" > .env
+echo "API_TOKEN=tu_token_superseguro" >> .env
 
 # Ejecuta la API
 python main.py
 ```
 
 La API estará disponible en: `http://localhost:8000`
+
+# 🔐 Autenticación por token
+
+Todos los endpoints requieren un token de autenticación, excepto `/`, `/docs`, `/redoc` y `/openapi.json`.
+
+- Define tu token personalizado en el archivo `.env`:
+
+```env
+API_TOKEN=tu_token_superseguro
+```
+
+- Debes enviar el token en las peticiones usando el header `Authorization`:
+
+### Ejemplo cURL
+```bash
+curl -X POST "http://localhost:8000/chat/simple" \
+  -H "Authorization: Bearer tu_token_superseguro" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Hola, ¿en qué me puedes ayudar?",
+    "client_id": "demo"
+  }'
+```
+
+### Ejemplo Python (requests)
+```python
+import requests
+
+headers = {
+    "Authorization": "Bearer tu_token_superseguro",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(
+    "http://localhost:8000/chat/simple",
+    headers=headers,
+    json={
+        "message": "Hola, ¿en qué me puedes ayudar?",
+        "client_id": "demo"
+    }
+)
+print(response.json())
+```
 
 ## 📚 Uso
 
