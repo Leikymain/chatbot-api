@@ -128,13 +128,6 @@ CLIENT_CONFIGS["nuevo"] = {
 
 Modifica la key `"model"` en la llamada a `client.messages.create` (por ejemplo `"claude-sonnet-4-5-20250929"`).
 
-## 📊 Roadmap
-
-- [ ] Autenticación JWT
-- [ ] Backend con base de datos dinámica
-- [ ] Rate limiting y logs avanzados
-- [ ] Analytics de uso
-- [ ] Soporte multi-idioma
 
 ## 🤝 Contribuye
 
