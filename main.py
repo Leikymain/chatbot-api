@@ -165,7 +165,7 @@ async def chat(request: ChatRequest, req: Request):
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
 
         response = client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+            model="claude-haiku-4-5-20251001",
             max_tokens=request.max_tokens or client_config["max_tokens"],
             temperature=request.temperature,
             system=system_prompt,
