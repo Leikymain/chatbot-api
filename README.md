@@ -51,14 +51,9 @@ python main.py
 
 La API estará disponible en: `http://localhost:8000`
 
-## 🔧 Variables de Entorno
+## 🔐 Autenticación y entorno
 
-- `ANTHROPIC_API_KEY` (obligatoria): clave de Anthropic.
-- `API_TOKEN` (obligatoria): token Bearer para proteger endpoints.
-- `RATE_LIMIT` (opcional, por defecto `30`): nº de peticiones por minuto por IP.
-- `PORT` (opcional, por defecto `8000`): puerto de escucha cuando uses contenedor.
-
-# 🔐 Autenticación por token
+El servicio obtiene automáticamente sus tokens desde variables de entorno privadas (Railway, Docker, etc.). No es necesario introducir tokens desde el frontend ni en Swagger.
 
 Los endpoints protegidos requieren Bearer Token. En Swagger (`/docs`) puedes usar el botón "Authorize".
 
@@ -70,11 +65,9 @@ API_TOKEN=tu_token_superseguro
 
 - Envía el header `Authorization: Bearer <token>`:
 
-### Ejemplo cURL
-
+### Ejemplo cURL (sin enviar Authorization desde cliente)
 ```bash
 curl -X POST "http://localhost:8000/chat/simple" \
-  -H "Authorization: Bearer tu_token_superseguro" \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Hola, ¿en qué me puedes ayudar?",
