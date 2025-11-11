@@ -53,9 +53,9 @@ La API estará disponible en: `http://localhost:8000`
 
 ## 🔐 Autenticación y entorno
 
-El servicio obtiene automáticamente sus tokens desde variables de entorno privadas (Railway, Docker, etc.). No es necesario introducir tokens desde el frontend ni en Swagger.
+Las credenciales del servicio se gestionan mediante variables de entorno seguras (Railway, Docker, etc.).
 
-Los endpoints protegidos requieren Bearer Token. En Swagger (`/docs`) puedes usar el botón "Authorize".
+Los endpoints protegidos requieren Bearer Token. En Swagger (`/docs`) puedes usar el botón "Authorize" para introducirlo una sola vez.
 
 - Define tu token en `.env`:
 
@@ -63,11 +63,12 @@ Los endpoints protegidos requieren Bearer Token. En Swagger (`/docs`) puedes usa
 API_TOKEN=tu_token_superseguro
 ```
 
-- Envía el header `Authorization: Bearer <token>`:
+- Envía siempre el header `Authorization: Bearer <token>` en tus peticiones.
 
-### Ejemplo cURL (sin enviar Authorization desde cliente)
+### Ejemplo cURL
 ```bash
 curl -X POST "http://localhost:8000/chat/simple" \
+  -H "Authorization: Bearer tu_token_superseguro" \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Hola, ¿en qué me puedes ayudar?",

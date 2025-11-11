@@ -23,37 +23,44 @@ logger.addHandler(handler)
 if not ENV_AUTH_TOKEN:
     logger.warning("⚠️ Token de entorno no configurado")
 
+ALLOWED_ORIGINS = [
+    "https://automapymes.com",
+    "https://www.automapymes.com",
+    "https://*.automapymes.com"
+]
+
 app = FastAPI(
     title="AI Chatbot API",
     description="API profesional de chatbot con IA - By Jorge Lago",
     version="1.1.0"
 )
 
-# CORS restringido a automapimes.com y subdominios (recomendado)
+# CORS para permitir llamadas desde dominios de producción autorizados
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[],
-    allow_origin_regex=r"^https://([a-z0-9-]+\.)?automapimes\.com$",
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # =========================
 # 🔐 AUTENTICACIÓN POR TOKEN
 # =========================
 
-# sección de autenticación: eliminar dependencias del cliente y uso de HTTPBearer
-# from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials  # (eliminar esta import)
-security = HTTPBearer(auto_error=False)  # (eliminar)
+API_TOKEN = os.getenv("API_TOKEN")
+security = HTTPBearer(auto_error=False)
 
-# 🔐 AUTENTICACIÓN POR TOKEN (eliminado el input manual del cliente)
-# API_TOKEN = os.getenv("API_TOKEN")  # (deja de usarse para validar al cliente)
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Dependencia para proteger endpoints mediante Bearer Token.
     También activa el botón 'Authorize' en Swagger (/docs).
     """
+    if not API_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="API_TOKEN no configurado en el servidor"
+        )
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,7 +166,7 @@ def list_clients():
 # ======================
 
 # endpoint /chat sin dependencia de verify_token, mantiene rate limit
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat", response_model=ChatResponse, dependencies=[Depends(verify_token)])
 async def chat(request: ChatRequest, req: Request):
     """
     Endpoint principal del chatbot.
@@ -175,7 +182,7 @@ async def chat(request: ChatRequest, req: Request):
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="Error interno. Contacta con soporte.")
+        raise HTTPException(status_code=500, detail="Falta ANTHROPIC_API_KEY")
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
@@ -196,21 +203,18 @@ async def chat(request: ChatRequest, req: Request):
         )
 
     except anthropic.APIError as e:
-        raise HTTPException(status_code=502, detail="Error con el proveedor de IA.")
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error interno. Contacta con soporte.")
+        raise HTTPException(status_code=500, detail=f"Error de API de Anthropic: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error inesperado: {str(e)}")
 
 
 # endpoint /chat/simple sin dependencia de verify_token
-@app.post("/chat/simple")
-async def simple_chat(message: str, client_id: str = "demo", req: Request = None):
+@app.post("/chat/simple", dependencies=[Depends(verify_token)])
+async def simple_chat(message: str, req: Request, client_id: str = "demo"):
     """
     Endpoint simplificado para pruebas rápidas.
     Protegido con token y limitación de peticiones.
     """
-    if req:
-        check_rate_limit(req.client.host)
-
     request = ChatRequest(messages=[Message(role="user", content=message)], client_id=client_id)
     return await chat(request, req)
 
