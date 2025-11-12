@@ -9,6 +9,8 @@ import anthropic
 import os
 import time
 import logging
+from auth_middleware import require_auth
+from fastapi import Depends
 
 load_dotenv()
 
@@ -167,7 +169,7 @@ def list_clients():
 
 # endpoint /chat sin dependencia de verify_token, mantiene rate limit
 @app.post("/chat", response_model=ChatResponse, dependencies=[Depends(verify_token)])
-async def chat(request: ChatRequest, req: Request):
+async def chat(request: ChatRequest, req: Request,token: str = Depends(require_auth)):
     """
     Endpoint principal del chatbot.
     Protegido con token y rate limit.
@@ -210,7 +212,7 @@ async def chat(request: ChatRequest, req: Request):
 
 # endpoint /chat/simple sin dependencia de verify_token
 @app.post("/chat/simple", dependencies=[Depends(verify_token)])
-async def simple_chat(message: str, req: Request, client_id: str = "demo"):
+async def simple_chat(message: str, req: Request, client_id: str = "demo",token: str = Depends(require_auth)):
     """
     Endpoint simplificado para pruebas rápidas.
     Protegido con token y limitación de peticiones.
