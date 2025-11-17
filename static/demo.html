@@ -71,9 +71,7 @@
         <p>Obtén tu token en la landing page</p>
 
         <input id="token-input" placeholder="Token..." />
-
         <button onclick="saveToken()">Continuar</button>
-
         <div id="error">Token inválido</div>
       </div>
     </div>
@@ -81,58 +79,48 @@
     <script>
       const CHECK_URL = "/auth/check";
 
+      async function checkToken(token) {
+        try {
+          const res = await fetch(CHECK_URL, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          return res.ok;
+        } catch (err) {
+          console.error("AuthService unreachable:", err);
+          return false;
+        }
+      }
+
       async function saveToken() {
         const token = document.getElementById("token-input").value.trim();
         if (!token) return;
 
-        // Validar token llamando a un endpoint PROTEGIDO
-        const res = await fetch(CHECK_URL, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
+        const valid = await checkToken(token);
+        if (!valid) {
           document.getElementById("error").style.display = "block";
           return;
         }
 
-        // Guardar token localmente
+        // Guardar token localmente para usarlo en requests protegidos
         localStorage.setItem("demo_token", token);
 
-        // Insertarlo en Swagger automáticamente al cargar docs
-        sessionStorage.setItem("pending_swagger_token", token);
+        // Ocultar modal
+        document.getElementById("modal").style.display = "none";
 
-        // Redirigir a /docs
-        window.location.href = "/docs";
+        // Redirigir a demo (o a docs si quieres ver Swagger)
+        window.location.href = "/demo";
       }
 
-      // 👇 ESTE CÓDIGO SE EJECUTA EN /docs
-      //     Inserta el token automáticamente en Swagger UI
-      window.addEventListener("DOMContentLoaded", () => {
-        const token = sessionStorage.getItem("pending_swagger_token");
+      // Si ya existe token válido en localStorage, saltar el modal
+      window.addEventListener("DOMContentLoaded", async () => {
+        const token = localStorage.getItem("demo_token");
         if (!token) return;
 
-        setTimeout(() => {
-          const btn = document.querySelector(".authorize");
-          if (btn) btn.click();
-
-          setTimeout(() => {
-            const input = document.querySelector("input[type='text']");
-            if (input) {
-              input.value = token;
-              input.dispatchEvent(new Event("input", { bubbles: true }));
-            }
-
-            const authorizeBtn = document.querySelector(
-              ".btn.modal-btn.auth.authorize"
-            );
-            if (authorizeBtn) authorizeBtn.click();
-
-            sessionStorage.removeItem("pending_swagger_token");
-          }, 500);
-        }, 500);
+        const valid = await checkToken(token);
+        if (valid) {
+          document.getElementById("modal").style.display = "none";
+        }
       });
     </script>
   </body>
