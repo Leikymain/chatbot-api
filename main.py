@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -10,9 +12,9 @@ import os
 import time
 import logging
 from auth_middleware import require_auth
-from fastapi import Depends
 
 load_dotenv()
+
 
 # Aviso genérico si falta token de entorno (compatibilidad con Railway)
 ENV_AUTH_TOKEN = os.getenv("API_TOKEN") or os.getenv("AUTH_TOKEN")
@@ -36,6 +38,7 @@ app = FastAPI(
     description="API profesional de chatbot con IA - By Jorge Lago",
     version="1.1.0"
 )
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # CORS para permitir llamadas desde dominios de producción autorizados
 app.add_middleware(
@@ -144,14 +147,14 @@ CLIENT_CONFIGS = {
 # 🌐 ENDPOINTS PÚBLICOS
 # ======================
 
-@app.get("/")
-def root():
-    return {
-        "message": "AI Chatbot API - Activa",
-        "docs": "/docs",
-        "version": "1.1.0",
-        "developer": "Jorge Lago Campos"
-    }
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url="/docs")
+
+@app.get("/demo", include_in_schema=False)
+def serve_demo():
+    with open("static/demo.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
 
 @app.get("/health")
 def health_check():
