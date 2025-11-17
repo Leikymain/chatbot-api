@@ -1,6 +1,5 @@
-from fastapi import FastAPI, HTTPException, Request, status, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -15,14 +14,13 @@ from auth_middleware import require_auth
 
 load_dotenv()
 
-# Aviso token entorno
+# Logger
 ENV_AUTH_TOKEN = os.getenv("API_TOKEN") or os.getenv("AUTH_TOKEN")
 logger = logging.getLogger("chatbot-api")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 logger.addHandler(handler)
-
 if not ENV_AUTH_TOKEN:
     logger.warning("⚠️ Token de entorno no configurado")
 
@@ -37,9 +35,7 @@ app = FastAPI(
     description="API profesional de chatbot con IA - By Jorge Lago",
     version="1.1.0"
 )
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -48,10 +44,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# =================================
-# ⚙️ RATE LIMITING
-# =================================
-
+# =========================
+# RATE LIMIT
+# =========================
 RATE_LIMIT = int(os.getenv("RATE_LIMIT", 30))
 RATE_WINDOW = 60
 request_timestamps = {}
@@ -62,18 +57,14 @@ def check_rate_limit(client_ip: str):
     timestamps = [t for t in timestamps if now - t < RATE_WINDOW]
 
     if len(timestamps) >= RATE_LIMIT:
-        raise HTTPException(
-            status_code=429,
-            detail="Demasiadas peticiones. Espera un minuto."
-        )
+        raise HTTPException(429, "Demasiadas peticiones. Espera un minuto.")
 
     timestamps.append(now)
     request_timestamps[client_ip] = timestamps
 
-# ==========================
-# 🧠 MODELOS
-# ==========================
-
+# =========================
+# MODELOS
+# =========================
 class Message(BaseModel):
     role: str
     content: str
@@ -91,36 +82,27 @@ class ChatResponse(BaseModel):
     timestamp: str
 
 CLIENT_CONFIGS = {
-    "demo": {
-        "name": "Demo Client",
-        "system_prompt": "Eres un asistente amigable.",
-        "max_tokens": 1024
-    },
-    "ecommerce": {
-        "name": "E-commerce Assistant",
-        "system_prompt": "Ayudas con productos y pedidos.",
-        "max_tokens": 800
-    },
-    "soporte": {
-        "name": "Tech Support Bot",
-        "system_prompt": "Respondes sobre problemas técnicos.",
-        "max_tokens": 1500
-    }
+    "demo": {"name": "Demo Client", "system_prompt": "Eres un asistente amigable.", "max_tokens": 1024},
+    "ecommerce": {"name": "E-commerce Assistant", "system_prompt": "Ayudas con productos y pedidos.", "max_tokens": 800},
+    "soporte": {"name": "Tech Support Bot", "system_prompt": "Respondes sobre problemas técnicos.", "max_tokens": 1500}
 }
 
-# ======================
-# 🌐 ENDPOINTS PÚBLICOS
-# ======================
-
+# =========================
+# ENDPOINTS PÚBLICOS
+# =========================
 @app.get("/", include_in_schema=False)
 def root_redirect():
-    # 🎯 Esto carga tu demo.html con el modal
     return RedirectResponse(url="/demo")
 
 @app.get("/demo", include_in_schema=False)
 def serve_demo():
     with open("static/demo.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
+
+@app.get("/auth/check")
+async def auth_check(token: str = Depends(require_auth)):
+    """Verifica si el token en header es válido (para el modal)."""
+    return {"valid": True}
 
 @app.get("/health")
 def health_check():
@@ -130,16 +112,11 @@ def health_check():
 def list_clients():
     return {"clients": list(CLIENT_CONFIGS.keys()), "configs": CLIENT_CONFIGS}
 
-# ======================
-# 💬 ENDPOINTS PROTEGIDOS
-# ======================
-
+# =========================
+# ENDPOINTS PROTEGIDOS
+# =========================
 @app.post("/chat")
-async def chat(
-    request: ChatRequest,
-    req: Request,
-    token: str = Depends(require_auth)   # 👉 SOLO depende del middleware
-):
+async def chat(request: ChatRequest, req: Request, token: str = Depends(require_auth)):
     check_rate_limit(req.client.host)
 
     if request.client_id not in CLIENT_CONFIGS:
@@ -174,22 +151,13 @@ async def chat(
         raise HTTPException(500, f"Error inesperado: {str(e)}")
 
 @app.post("/chat/simple")
-async def simple_chat(
-    message: str,
-    req: Request,
-    client_id: str = "demo",
-    token: str = Depends(require_auth)  # 👉 SOLO middleware
-):
-    request = ChatRequest(
-        messages=[Message(role="user", content=message)],
-        client_id=client_id
-    )
+async def simple_chat(message: str, req: Request, client_id: str = "demo", token: str = Depends(require_auth)):
+    request = ChatRequest(messages=[Message(role="user", content=message)], client_id=client_id)
     return await chat(request, req)
 
-# ======================
-# 🧩 RUN
-# ======================
-
+# =========================
+# RUN
+# =========================
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

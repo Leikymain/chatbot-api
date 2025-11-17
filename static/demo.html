@@ -79,17 +79,18 @@
     </div>
 
     <script>
-      const AUTH_URL = "/auth/verify-token";
+      const CHECK_URL = "/auth/check";
 
       async function saveToken() {
         const token = document.getElementById("token-input").value.trim();
         if (!token) return;
 
-        // Validar token con tu Auth Service
-        const res = await fetch(AUTH_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
+        // Validar token llamando a un endpoint PROTEGIDO
+        const res = await fetch(CHECK_URL, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!res.ok) {
@@ -97,20 +98,22 @@
           return;
         }
 
-        // Guardar token
+        // Guardar token localmente
         localStorage.setItem("demo_token", token);
 
-        // Insertarlo en Swagger automáticamente
-        authorizeSwagger(token);
+        // Insertarlo en Swagger automáticamente al cargar docs
+        sessionStorage.setItem("pending_swagger_token", token);
 
-        // Ocultar modal
-        document.getElementById("modal").style.display = "none";
-
-        // Cargar Swagger
+        // Redirigir a /docs
         window.location.href = "/docs";
       }
 
-      function authorizeSwagger(token) {
+      // 👇 ESTE CÓDIGO SE EJECUTA EN /docs
+      //     Inserta el token automáticamente en Swagger UI
+      window.addEventListener("DOMContentLoaded", () => {
+        const token = sessionStorage.getItem("pending_swagger_token");
+        if (!token) return;
+
         setTimeout(() => {
           const btn = document.querySelector(".authorize");
           if (btn) btn.click();
@@ -126,9 +129,11 @@
               ".btn.modal-btn.auth.authorize"
             );
             if (authorizeBtn) authorizeBtn.click();
+
+            sessionStorage.removeItem("pending_swagger_token");
           }, 500);
         }, 500);
-      }
+      });
     </script>
   </body>
 </html>
