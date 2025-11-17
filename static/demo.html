@@ -82,31 +82,28 @@
         if (!token) return;
 
         try {
-          // Verificar token usando el endpoint protegido con require_auth
+          // Validar token en backend
           const res = await fetch(CHECK_URL, {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
           });
 
-          if (!res.ok) {
-            document.getElementById("error").style.display = "block";
-            return;
-          }
+          if (!res.ok) throw new Error("Token inválido");
 
-          // Guardar token en localStorage
+          // Guardar token localmente
           localStorage.setItem("demo_token", token);
 
-          // Guardar temporalmente para inyección en Swagger
+          // Guardar temporalmente para inyectar en Swagger
           sessionStorage.setItem("pending_swagger_token", token);
 
-          // Redirigir a /docs
-          window.location.href = "/docs";
+          // Redirigir a demo/barra2
+          window.location.href = "/barra2"; // Cambia /barra2 según tu setup
         } catch (err) {
           document.getElementById("error").style.display = "block";
         }
       }
 
-      // === Inserta automáticamente el token en Swagger UI ===
+      // 👇 Este código se ejecuta en /docs (Swagger UI)
       window.addEventListener("DOMContentLoaded", () => {
         const token =
           sessionStorage.getItem("pending_swagger_token") ||
@@ -114,25 +111,24 @@
         if (!token) return;
 
         setTimeout(() => {
-          // Abrir modal de Authorization
-          const btn = document.querySelector(".authorize");
-          if (btn) btn.click();
+          const authorizeBtn = document.querySelector(".authorize");
+          if (!authorizeBtn) return;
+
+          authorizeBtn.click();
 
           setTimeout(() => {
-            // Insertar token en input
             const input = document.querySelector("input[type='text']");
             if (input) {
               input.value = token;
               input.dispatchEvent(new Event("input", { bubbles: true }));
             }
 
-            // Presionar botón de authorize
-            const authorizeBtn = document.querySelector(
+            const modalAuthorizeBtn = document.querySelector(
               ".btn.modal-btn.auth.authorize"
             );
-            if (authorizeBtn) authorizeBtn.click();
+            if (modalAuthorizeBtn) modalAuthorizeBtn.click();
 
-            // Limpiar la sesión temporal
+            // Limpiar sessionStorage para no repetir
             sessionStorage.removeItem("pending_swagger_token");
           }, 500);
         }, 500);
