@@ -3,7 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <title>API Demo - Token Required</title>
-
     <style>
       body {
         font-family: system-ui, sans-serif;
@@ -63,7 +62,6 @@
       }
     </style>
   </head>
-
   <body>
     <div id="modal">
       <div id="modal-box">
@@ -79,48 +77,65 @@
     <script>
       const CHECK_URL = "/auth/check";
 
-      async function checkToken(token) {
-        try {
-          const res = await fetch(CHECK_URL, {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          return res.ok;
-        } catch (err) {
-          console.error("AuthService unreachable:", err);
-          return false;
-        }
-      }
-
       async function saveToken() {
         const token = document.getElementById("token-input").value.trim();
         if (!token) return;
 
-        const valid = await checkToken(token);
-        if (!valid) {
+        try {
+          // Verificar token usando el endpoint protegido con require_auth
+          const res = await fetch(CHECK_URL, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!res.ok) {
+            document.getElementById("error").style.display = "block";
+            return;
+          }
+
+          // Guardar token en localStorage
+          localStorage.setItem("demo_token", token);
+
+          // Guardar temporalmente para inyección en Swagger
+          sessionStorage.setItem("pending_swagger_token", token);
+
+          // Redirigir a /docs
+          window.location.href = "/docs";
+        } catch (err) {
           document.getElementById("error").style.display = "block";
-          return;
         }
-
-        // Guardar token localmente para usarlo en requests protegidos
-        localStorage.setItem("demo_token", token);
-
-        // Ocultar modal
-        document.getElementById("modal").style.display = "none";
-
-        // Redirigir a demo (o a docs si quieres ver Swagger)
-        window.location.href = "/demo";
       }
 
-      // Si ya existe token válido en localStorage, saltar el modal
-      window.addEventListener("DOMContentLoaded", async () => {
-        const token = localStorage.getItem("demo_token");
+      // === Inserta automáticamente el token en Swagger UI ===
+      window.addEventListener("DOMContentLoaded", () => {
+        const token =
+          sessionStorage.getItem("pending_swagger_token") ||
+          localStorage.getItem("demo_token");
         if (!token) return;
 
-        const valid = await checkToken(token);
-        if (valid) {
-          document.getElementById("modal").style.display = "none";
-        }
+        setTimeout(() => {
+          // Abrir modal de Authorization
+          const btn = document.querySelector(".authorize");
+          if (btn) btn.click();
+
+          setTimeout(() => {
+            // Insertar token en input
+            const input = document.querySelector("input[type='text']");
+            if (input) {
+              input.value = token;
+              input.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+
+            // Presionar botón de authorize
+            const authorizeBtn = document.querySelector(
+              ".btn.modal-btn.auth.authorize"
+            );
+            if (authorizeBtn) authorizeBtn.click();
+
+            // Limpiar la sesión temporal
+            sessionStorage.removeItem("pending_swagger_token");
+          }, 500);
+        }, 500);
       });
     </script>
   </body>
