@@ -10,6 +10,7 @@ import anthropic
 import os
 import time
 import logging
+from auth_middleware import require_auth
 
 load_dotenv()
 
@@ -106,6 +107,10 @@ def health_check():
 def list_clients():
     return {"clients": list(CLIENT_CONFIGS.keys()), "configs": CLIENT_CONFIGS}
 
+@app.get("/auth/check")
+async def auth_check(token: str = Depends(require_auth)):
+    """Verifica si el token en header es válido (para el modal)."""
+    return {"valid": True}
 # =========================
 # ENDPOINTS PROTEGIDOS (DEMO)
 # =========================
