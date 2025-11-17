@@ -11,6 +11,7 @@ import os
 import time
 import logging
 from auth_middleware import require_auth
+import requests
 
 load_dotenv()
 
