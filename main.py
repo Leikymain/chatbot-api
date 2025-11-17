@@ -15,7 +15,7 @@ from auth_middleware import require_auth
 load_dotenv()
 
 # Logger
-ENV_AUTH_TOKEN = os.getenv("API_TOKEN") or os.getenv("AUTH_TOKEN")
+ENV_AUTH_TOKEN = os.getenv("API_TOKEN") or os.getenv("API_TOKEN")
 logger = logging.getLogger("chatbot-api")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
