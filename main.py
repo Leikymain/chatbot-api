@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,13 +10,11 @@ import anthropic
 import os
 import time
 import logging
-from auth_middleware import require_auth
-import requests
 
 load_dotenv()
 
 # Logger
-ENV_AUTH_TOKEN = os.getenv("API_TOKEN") 
+ENV_AUTH_TOKEN = os.getenv("API_TOKEN")
 logger = logging.getLogger("chatbot-api")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
@@ -100,11 +98,6 @@ def serve_demo():
     with open("static/demo.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
-@app.get("/auth/check")
-async def auth_check(token: str = Depends(require_auth)):
-    """Verifica si el token en header es válido (para el modal)."""
-    return {"valid": True}
-
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
@@ -114,10 +107,10 @@ def list_clients():
     return {"clients": list(CLIENT_CONFIGS.keys()), "configs": CLIENT_CONFIGS}
 
 # =========================
-# ENDPOINTS PROTEGIDOS
+# ENDPOINTS PROTEGIDOS (DEMO)
 # =========================
 @app.post("/chat")
-async def chat(request: ChatRequest, req: Request, token: str = Depends(require_auth)):
+async def chat(request: ChatRequest, req: Request):
     check_rate_limit(req.client.host)
 
     if request.client_id not in CLIENT_CONFIGS:
@@ -152,7 +145,7 @@ async def chat(request: ChatRequest, req: Request, token: str = Depends(require_
         raise HTTPException(500, f"Error inesperado: {str(e)}")
 
 @app.post("/chat/simple")
-async def simple_chat(message: str, req: Request, client_id: str = "demo", token: str = Depends(require_auth)):
+async def simple_chat(message: str, req: Request, client_id: str = "demo"):
     request = ChatRequest(messages=[Message(role="user", content=message)], client_id=client_id)
     return await chat(request, req)
 
