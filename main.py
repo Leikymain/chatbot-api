@@ -11,6 +11,7 @@ import os
 import time
 import logging
 from auth_middleware import require_auth
+from fastapi import Query
 
 load_dotenv()
 
@@ -115,7 +116,7 @@ async def auth_check(token: str = Depends(require_auth)):
 # ENDPOINTS PROTEGIDOS (DEMO)
 # =========================
 @app.post("/chat")
-async def chat(request: ChatRequest, req: Request, demo_token: str ):
+async def chat(request: ChatRequest, req: Request, demo_token: str = Query(...) ):
     check_rate_limit(req.client.host )
 
     token = await require_auth(demo_token)
@@ -154,12 +155,12 @@ async def chat(request: ChatRequest, req: Request, demo_token: str ):
 async def simple_chat(
     message: str,
     req: Request,
-    demo_token: str,
+    demo_token: str = Query(...),
     client_id: str = "demo"
 ):
     token = await require_auth(demo_token)
     request = ChatRequest(messages=[Message(role="user", content=message)], client_id=client_id)
-    return await chat(request, req)
+    return await chat(request, req, demo_token)
 
 # =========================
 # RUN
