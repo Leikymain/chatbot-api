@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>API Demo - Token Required</title>
+    <title>API Chatbot - Token Required</title>
     <style>
       body {
         font-family: system-ui, sans-serif;
@@ -21,6 +21,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        z-index: 9999;
       }
 
       #modal-box {
@@ -67,7 +68,6 @@
       <div id="modal-box">
         <h2>Introduce tu token de acceso</h2>
         <p>Obtén tu token en la landing page</p>
-
         <input id="token-input" placeholder="Token..." />
         <button onclick="saveToken()">Continuar</button>
         <div id="error">Token inválido</div>
@@ -90,48 +90,40 @@
 
           if (!res.ok) throw new Error("Token inválido");
 
-          // Guardar token localmente
+          // Guardar token en localStorage
           localStorage.setItem("demo_token", token);
 
-          // Guardar temporalmente para inyectar en Swagger
-          sessionStorage.setItem("pending_swagger_token", token);
-
-          // Redirigir a demo/barra2
+          // Redirigir a Swagger Docs
           window.location.href = "/docs";
         } catch (err) {
           document.getElementById("error").style.display = "block";
         }
       }
 
-      // 👇 Este código se ejecuta en /docs (Swagger UI)
+      // ⚡ Modal siempre visible
       window.addEventListener("DOMContentLoaded", () => {
-        const token =
-          sessionStorage.getItem("pending_swagger_token") ||
-          localStorage.getItem("demo_token");
+        document.getElementById("modal").style.display = "flex";
+
+        // Inyección automática del token en Swagger UI
+        const token = localStorage.getItem("demo_token");
         if (!token) return;
 
-        setTimeout(() => {
-          const authorizeBtn = document.querySelector(".authorize");
-          if (!authorizeBtn) return;
+        const interval = setInterval(() => {
+          if (window.ui && window.ui.getSystem) {
+            clearInterval(interval);
 
-          authorizeBtn.click();
+            const originalFetch = window.fetch;
+            window.fetch = function (url, options = {}) {
+              options.headers = {
+                ...(options.headers || {}),
+                Authorization: `Bearer ${token}`, // inyecta token automáticamente
+              };
+              return originalFetch(url, options);
+            };
 
-          setTimeout(() => {
-            const input = document.querySelector("input[type='text']");
-            if (input) {
-              input.value = token;
-              input.dispatchEvent(new Event("input", { bubbles: true }));
-            }
-
-            const modalAuthorizeBtn = document.querySelector(
-              ".btn.modal-btn.auth.authorize"
-            );
-            if (modalAuthorizeBtn) modalAuthorizeBtn.click();
-
-            // Limpiar sessionStorage para no repetir
-            sessionStorage.removeItem("pending_swagger_token");
-          }, 500);
-        }, 500);
+            console.log("Token inyectado automáticamente en Swagger y fetchs!");
+          }
+        }, 200);
       });
     </script>
   </body>
