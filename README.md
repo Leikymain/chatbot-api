@@ -2,6 +2,13 @@
 
 API profesional de chatbot con Inteligencia Artificial usando Claude (Anthropic), lista para integrar en cualquier aplicación web o móvil. Incluye logging para fácil depuración, autenticación por Bearer Token y limitación de peticiones para proteger tus créditos.
 
+## Stack
+
+- 🚀 **FastAPI**: Framework web rápido y moderno
+- 🚀 **Anthropic**: Inteligencia Artificial para chatbots
+- 🚀 **Swagger UI**: Documentación automática
+- 🚀 **Python 3.12**: Lenguaje de programación
+
 **Desarrollado por Jorge Lago Campos** | [LinkedIn](https://www.linkedin.com/in/jorge-lago-campos/) | [GitHub](https://github.com/Leikymain)
 
 ## 🚀 Características
